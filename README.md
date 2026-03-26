@@ -4,6 +4,8 @@ A [Claude Code](https://claude.com/claude-code) plugin and portable prompt pack 
 
 AIUP (AI Unified Process) is a spec-driven approach to AI-assisted development. This project applies AIUP principles to Alfresco extensions.
 
+> If this project keeps expanding in scope and quality, it may eventually supersede the guidance currently collected in [alfresco-developer-series](https://github.com/aborroy/alfresco-developer-series).
+
 ## Prerequisites
 
 - Java 17+
@@ -273,10 +275,13 @@ Three hooks fire automatically during development:
 | **post-generate** | `Edit`/`Write` of artefacts from `/content-model` through `/test` | Reminds to update traceability in `REQUIREMENTS.md` |
 | **on-error** | Failed `mvn`/`mvnw` command | Invokes `alfresco-debugger-agent` with error output |
 
-## Related Projects
+## ROADMAP
 
-- [aiup-alfresco-reference](https://github.com/aborroy/aiup-alfresco-reference) — reference Platform JAR for end-to-end validation
+The current workflow covers the core Alfresco extension paths first. The following areas are planned next so the repository can guide a broader set of real-world implementations:
 
-## License
-
-[Apache License 2.0](LICENSE)
+- **Scheduled jobs**: repository cron-style jobs, Spring/Quartz schedulers, maintenance and batch jobs, and recurring tasks initialized at bootstrap time
+- **Workflow and process customization**: workflow models, BPMN/Activiti artefacts, task listeners, task forms, and process deployment support
+- **Bootstrap and upgrade mechanics**: module components, repository patches, data bootstrap loaders, and upgrade tasks
+- **Rule framework extras**: folder rule setup patterns, rule conditions, and admin-facing rule configuration assets beyond standalone action executers
+- **Custom transforms and renditions**: custom transform engines, mimetype registration, rendition definitions, thumbnails, and transform routing
+- **UI extensions**: Share/Surf/Aikau extensions, Share forms, dashlets, evaluators, and ADF/ACA/ADW frontends
