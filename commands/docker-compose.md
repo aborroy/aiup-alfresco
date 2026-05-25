@@ -50,6 +50,7 @@ Generate a complete `compose.yaml` for an Alfresco Content Services stack.
 - If an Out-of-Process Spring Boot app is present, its `build:` context must point to the Event Handler `Root path` from `REQUIREMENTS.md` (`.` for Event Handler only mode, `{name}-events/` for Mixed mode)
 - Never assume the Platform JAR, Share JAR, and Event Handler share the same build context or the same deployable artifact
 - Never mount Share resources into the `alfresco` service, and never mount repository module resources into the `share` service
+- **Service start order** — the `alfresco` service must depend on `postgres`, `activemq`, and `transform-core-aio` only. Never add `solr6` or `elasticsearch` to `alfresco`'s `depends_on` — Solr/OpenSearch discovers ACS after startup; making ACS wait for them creates a circular dependency (`alfresco → solr6 → alfresco`).
 
 ## Canonical Image Tags (ACS 26.1) — use exactly as written, never infer or abbreviate
 

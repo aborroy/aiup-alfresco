@@ -63,7 +63,16 @@ alfresco.events.defaultExchangeName=alfresco.repo.event2
 </parent>
 ```
 - Expected to exist already from `/scaffold`; update only if the event starter dependency or related build config is missing
-- Include `alfresco-java-event-api-spring-boot-starter` dependency.
+- Include `alfresco-java-event-api-spring-boot-starter` dependency (version managed by the `alfresco-java-sdk` parent — do **not** declare an explicit version).
+- Always include the Alfresco public Nexus repository so the starter can be resolved without credentials:
+```xml
+<repositories>
+    <repository>
+        <id>alfresco-public</id>
+        <url>https://artifacts.alfresco.com/nexus/content/groups/public</url>
+    </repository>
+</repositories>
+```
 
 ## Conventions
 - `{event-project-root}` is `.` for Event Handler only mode, or `{name}-events/` for Mixed mode
