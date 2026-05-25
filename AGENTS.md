@@ -508,6 +508,82 @@ environment:
 
 ---
 
+## Bootstrap Loader Model
+
+> The Maven In-Process SDK (Platform JAR) is the only deployment target for bootstrap loaders. They run inside the ACS JVM during module startup, exactly once per module version.
+
+### Technology
+
+ACS 26.1 tracks module component execution in the repository database. The correct base class is `org.alfresco.repo.module.AbstractModuleComponent`. The framework records each execution keyed by `moduleId + name + sinceVersion`, preventing re-execution on restart.
+
+**Do NOT** use `@PostConstruct`, `init-method`, or `ApplicationReadyEvent` for repository data initialisation — they fire on every server restart and create duplicates.
+
+### File Placement
+
+| Artifact | Path |
+|----------|------|
+| Bootstrap loader class | `src/main/java/{package}/bootstrap/{LoaderName}BootstrapLoader.java` |
+| Bootstrap context entry | `src/main/resources/alfresco/module/{module-id}/context/bootstrap-context.xml` |
+| Unit test | `src/test/java/{package}/bootstrap/{LoaderName}BootstrapLoaderTest.java` |
+
+### Naming Conventions
+
+- **Class name**: `{LoaderName}BootstrapLoader` — extends `AbstractModuleComponent`
+- **Bean ID**: `{groupId}.{LoaderName}BootstrapLoader` — groupId prefix ensures global uniqueness across modules
+- `moduleId` property: must exactly match the value in `module.properties`
+- `sinceVersion`: module version string at which this loader was introduced (e.g. `1.0`)
+- `appliesFromVersion`: always `0.99` — ensures the loader also runs on `1.0-SNAPSHOT` builds
+
+### Spring Registration Pattern
+
+```xml
+<bean id="{groupId}.{LoaderName}BootstrapLoader"
+      class="{package}.bootstrap.{LoaderName}BootstrapLoader"
+      parent="module.baseComponent">
+    <property name="moduleId"           value="{module-id}"/>
+    <property name="name"               value="{LoaderName}BootstrapLoader"/>
+    <property name="description"        value="Bootstrap initial data for {module-id}"/>
+    <property name="sinceVersion"       value="1.0"/>
+    <property name="appliesFromVersion" value="0.99"/>
+    <property name="nodeService"        ref="NodeService"/>
+    <property name="fileFolderService"  ref="FileFolderService"/>
+    <property name="nodeLocatorService" ref="nodeLocatorService"/>
+</bean>
+```
+
+- Place in `bootstrap-context.xml` (the same file as `dictionaryBootstrap` if content model exists).
+- Do **not** add `depends-on="dictionaryBootstrap"` unless the loader references custom model types — the module framework already handles ordering.
+
+### Java Class Pattern
+
+```java
+public class {LoaderName}BootstrapLoader extends AbstractModuleComponent {
+    private static final Logger LOG = LoggerFactory.getLogger({LoaderName}BootstrapLoader.class);
+    private NodeService nodeService;
+    private FileFolderService fileFolderService;
+    private NodeLocatorService nodeLocatorService;
+
+    @Override
+    protected void executeInternal() throws Throwable {
+        NodeRef companyHome = nodeLocatorService.getNode("companyhome", null, null);
+        // create folders / categories / reference data
+    }
+    // setter injection only — no @Autowired
+}
+```
+
+- Extend `AbstractModuleComponent` and override `executeInternal()` — this is the only lifecycle method.
+- Do **not** add `@Transactional` — the framework provides a transaction automatically.
+- Do **not** wrap calls in `RetryingTransactionHelper` — already in a transaction.
+- Always obtain Company Home via `nodeLocatorService.getNode("companyhome", null, null)` — never hardcode a `NodeRef`.
+- Include `findOrCreateFolder()` helpers so the loader is safe to re-run in dev environments where the DB was reset without wiping the content store.
+
+### Re-running a Loader
+
+To re-run a loader after its first execution, **increment `sinceVersion`** in the bean definition and in `module.properties`. Never delete rows from `alf_applied_patch` or `alf_module_prop` manually.
+
+---
+
 ## Scheduled Job Model
 
 > The Maven In-Process SDK (Platform JAR) is the only deployment target for scheduled jobs. They run inside the ACS JVM using the embedded Quartz scheduler.
@@ -783,6 +859,10 @@ These patterns must **never** appear in generated code. Actively check for and r
 | Synchronous external HTTP calls inside service tasks or task listeners | Runs inside the ACS transaction; timeouts cause transaction rollback and workflow state corruption | Use Alfresco Action Service to queue async work; or use a separate boundary event for external integration |
 | Registering BPMN files via `dictionaryModelBootstrap` | `dictionaryModelBootstrap` does not know about Activiti's process engine — BPMN files are silently ignored | Use a separate `workflowDeployer` bean |
 | Omitting `bpm` import from workflow model XML | Workflow task types extend `bpm:startTask` or `bpm:activitiOutcomeTask` — the import is mandatory | Always add `<import uri="http://www.alfresco.org/model/bpm/1.0" prefix="bpm"/>` |
+| `@PostConstruct` or `ApplicationReadyEvent` for repository data initialisation | Fires on every ACS restart, creating duplicate folders, categories, or nodes on each server start | Extend `AbstractModuleComponent` with `parent="module.baseComponent"` — the framework tracks execution in the DB and runs `executeInternal()` exactly once per `sinceVersion` |
+| Extending `AbstractLifecycleBean` for a data bootstrap loader | `AbstractLifecycleBean` does not integrate with the module component tracking system; provides no idempotency guarantee | Extend `AbstractModuleComponent` instead |
+| Hardcoding a `NodeRef` string for Company Home or other well-known locations in a bootstrap loader | NodeRef UUIDs differ between repositories; hardcoded refs break on any install other than the original | Use `nodeLocatorService.getNode("companyhome", null, null)` |
+| `RetryingTransactionHelper` inside `executeInternal()` | `AbstractModuleComponent.executeInternal()` already runs inside a transaction managed by the module framework; wrapping again causes nested transaction issues | Use repository services directly within `executeInternal()` |
 | `@Scheduled` in a Platform JAR | Spring's `@Scheduled` is not integrated with Quartz or `JobLockService`; fires on every cluster node simultaneously causing duplicate work and data corruption | Extend `AbstractScheduledLockedJob`, register via `CronTriggerBean` wired to `schedulerFactory` |
 | `@Transactional` on a scheduled job executer method | Alfresco's transaction infrastructure is managed by `RetryingTransactionHelper`, not Spring's `@Transactional` proxy | Wrap repository calls in `retryingTransactionHelper.doInTransaction()` |
 | Quartz `startDelay` below 240000 ms | ACS may not have fully initialised (dictionary, subsystems, indexes) when the job first fires, causing `NullPointerException` or `ServiceUnavailableException` | Always set `startDelay` to at least `240000` (4 minutes) on `CronTriggerBean` |

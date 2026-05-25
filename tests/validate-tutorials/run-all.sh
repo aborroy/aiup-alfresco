@@ -11,7 +11,7 @@ set -euo pipefail
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
-SCENARIOS="maven-sdk-baseline content-types actions behaviours web-scripts workflows scheduled-jobs"
+SCENARIOS="maven-sdk-baseline content-types actions behaviours web-scripts workflows scheduled-jobs bootstrap-loader"
 
 PASS=0
 FAIL=0

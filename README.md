@@ -120,6 +120,7 @@ See [PORTABILITY.md](./PORTABILITY.md) for the non-Claude workflow.
 | `/behaviours` | In-Process | Any | Behaviour/policy class + Spring bean wiring |
 | `/actions` | In-Process | Any | `ActionExecuter` class + bean registration |
 | `/scheduled-jobs` | In-Process | Any | Cluster-safe Quartz `AbstractScheduledLockedJob` + executer bean + `CronTriggerBean` registration + unit test |
+| `/bootstrap-loader` | In-Process | Any | `AbstractModuleComponent` data loader that creates initial folders/categories exactly once per module version + unit test |
 | `/share-config` | Share JAR | Any | `share-config-custom.xml` + Share message bundle + optional evaluator stub |
 | `/surf` | Share JAR | Any | Surf extension metadata + page/component web scripts + optional message bundle/evaluator |
 | `/aikau` | Share JAR | Any | Aikau page descriptors + page-model JS + optional widget module/message bundle |
@@ -319,7 +320,8 @@ Three hooks fire automatically during development:
 The current workflow covers the core Alfresco extension paths first. The following areas are planned next so the repository can guide a broader set of real-world implementations:
 
 - ~~**Scheduled jobs**~~ — delivered: `/scheduled-jobs`
-- **Bootstrap and upgrade mechanics**: module components, repository patches, data bootstrap loaders, and upgrade tasks
+- ~~**Bootstrap and upgrade mechanics** (data bootstrap loader)~~ — delivered: `/bootstrap-loader`; repository patches and upgrade tasks remain planned
+- **Bootstrap and upgrade mechanics** (remaining): repository patches, upgrade tasks
 - **Rule framework extras**: folder rule setup patterns, rule conditions, and admin-facing rule configuration assets beyond standalone action executers
 - **Custom transforms and renditions**: custom transform engines, mimetype registration, rendition definitions, thumbnails, and transform routing
 - **UI extensions**: Share/Surf/Aikau extensions, Share forms, dashlets, evaluators, and ADF/ACA/ADW frontends
