@@ -195,6 +195,10 @@ by `alfresco-base-t-engine` — you only write the engine declaration and the co
 
 > **Do NOT generate an `Application.java`**. The main class `org.alfresco.transform.base.Application`
 > is provided by `alfresco-base-t-engine`. Generating a duplicate causes a startup conflict.
+>
+> **The `<repositories>` block is mandatory.** `alfresco-transform-core` and `alfresco-base-t-engine`
+> are on Alfresco Nexus (`https://artifacts.alfresco.com/nexus/content/groups/public`), not Maven
+> Central. Omitting it causes `Non-resolvable parent POM` build failure inside Docker.
 
 #### 2b. TransformEngine Bean
 `{engine-artifact}/src/main/java/{package}/transform/{EngineName}Engine.java`
