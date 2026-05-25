@@ -121,6 +121,7 @@ See [PORTABILITY.md](./PORTABILITY.md) for the non-Claude workflow.
 | `/actions` | In-Process | Any | `ActionExecuter` class + bean registration |
 | `/scheduled-jobs` | In-Process | Any | Cluster-safe Quartz `AbstractScheduledLockedJob` + executer bean + `CronTriggerBean` registration + unit test |
 | `/bootstrap-loader` | In-Process | Any | `AbstractModuleComponent` data loader that creates initial folders/categories exactly once per module version + unit test |
+| `/rule-conditions` | In-Process | Any | Custom `ActionConditionEvaluatorAbstractBase` rule condition with parameter definitions, Spring registration, and unit test |
 | `/share-config` | Share JAR | Any | `share-config-custom.xml` + Share message bundle + optional evaluator stub |
 | `/surf` | Share JAR | Any | Surf extension metadata + page/component web scripts + optional message bundle/evaluator |
 | `/aikau` | Share JAR | Any | Aikau page descriptors + page-model JS + optional widget module/message bundle |
@@ -322,6 +323,6 @@ The current workflow covers the core Alfresco extension paths first. The followi
 - ~~**Scheduled jobs**~~ — delivered: `/scheduled-jobs`
 - ~~**Bootstrap and upgrade mechanics** (data bootstrap loader)~~ — delivered: `/bootstrap-loader`; repository patches and upgrade tasks remain planned
 - **Bootstrap and upgrade mechanics** (remaining): repository patches, upgrade tasks
-- **Rule framework extras**: folder rule setup patterns, rule conditions, and admin-facing rule configuration assets beyond standalone action executers
+- ~~**Rule framework extras** (rule conditions)~~ — delivered: `/rule-conditions`; admin-facing rule UI configuration (Share) remains planned
 - **Custom transforms and renditions**: custom transform engines, mimetype registration, rendition definitions, thumbnails, and transform routing
 - **UI extensions**: Share/Surf/Aikau extensions, Share forms, dashlets, evaluators, and ADF/ACA/ADW frontends

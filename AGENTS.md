@@ -508,6 +508,73 @@ environment:
 
 ---
 
+## Rule Condition Model
+
+> The Maven In-Process SDK (Platform JAR) is the only deployment target for custom rule condition evaluators. They extend ACS's folder Rules engine and are available to both rule configuration and the Action Service REST API.
+
+### Technology
+
+ACS 26.1 ships `org.alfresco.repo.action.evaluator.ActionConditionEvaluatorAbstractBase` as the standard base class for all condition evaluators. The parent Spring bean `action-condition-evaluator` registers the evaluator with the Action Service via its `init()` method.
+
+### File Placement
+
+| Artifact | Path |
+|----------|------|
+| Condition evaluator class | `src/main/java/{package}/action/condition/{ConditionName}Condition.java` |
+| Spring bean registration | `src/main/resources/alfresco/module/{module-id}/context/service-context.xml` |
+| Unit test | `src/test/java/{package}/action/condition/{ConditionName}ConditionTest.java` |
+
+### Naming Conventions
+
+- **Class name**: `{ConditionName}Condition` — in package `{package}.action.condition`
+- **Condition ID constant**: `public static final String NAME = "{prefix}-{condition-name}"` — kebab-case, prefix-scoped (e.g. `sc-has-aspect`)
+- **Parameter constants**: `public static final String PARAM_{UPPER} = "{prefix}-{param-name}"`
+- **Bean ID**: `{prefix}.{conditionName}Condition`
+
+### Spring Registration Pattern
+
+```xml
+<bean id="{prefix}.{conditionName}Condition"
+      class="{package}.action.condition.{ConditionName}Condition"
+      parent="action-condition-evaluator">
+    <property name="nodeService" ref="NodeService"/>
+</bean>
+```
+
+- Use `parent="action-condition-evaluator"` — this handles `init()` and registration with the Action Service automatically.
+- Conditions and action executers share `service-context.xml` — no separate context file is needed.
+
+### Java Class Pattern
+
+```java
+public class {ConditionName}Condition extends ActionConditionEvaluatorAbstractBase {
+    public static final String NAME = "{prefix}-{condition-name}";
+
+    @Override
+    protected boolean evaluateImpl(ActionCondition actionCondition, NodeRef actionedUponNodeRef) {
+        if (!nodeService.exists(actionedUponNodeRef)) return false;
+        // condition logic — return true if satisfied
+    }
+
+    @Override
+    protected void addParameterDefinitions(List<ParameterDefinition> paramList) {
+        // declare parameters; omit override if condition takes no parameters
+    }
+    // setter injection only
+}
+```
+
+- Extend `ActionConditionEvaluatorAbstractBase`, not the interface `ActionConditionEvaluator` directly.
+- Override `evaluateImpl(ActionCondition, NodeRef)` — **not** `evaluate()` (which is implemented by the abstract base).
+- Always guard with `nodeService.exists()` before operating on the node.
+- Read parameter values with `actionCondition.getParameterValue(PARAM_NAME)`.
+
+### Share UI Exposure
+
+Registering the bean makes the condition available programmatically. To show it in the **Share Rules UI** dropdown, a `share-config-custom.xml` entry in a Share JAR is also needed — generate that with `/share-config`.
+
+---
+
 ## Bootstrap Loader Model
 
 > The Maven In-Process SDK (Platform JAR) is the only deployment target for bootstrap loaders. They run inside the ACS JVM during module startup, exactly once per module version.
@@ -859,6 +926,9 @@ These patterns must **never** appear in generated code. Actively check for and r
 | Synchronous external HTTP calls inside service tasks or task listeners | Runs inside the ACS transaction; timeouts cause transaction rollback and workflow state corruption | Use Alfresco Action Service to queue async work; or use a separate boundary event for external integration |
 | Registering BPMN files via `dictionaryModelBootstrap` | `dictionaryModelBootstrap` does not know about Activiti's process engine — BPMN files are silently ignored | Use a separate `workflowDeployer` bean |
 | Omitting `bpm` import from workflow model XML | Workflow task types extend `bpm:startTask` or `bpm:activitiOutcomeTask` — the import is mandatory | Always add `<import uri="http://www.alfresco.org/model/bpm/1.0" prefix="bpm"/>` |
+| Implementing `ActionConditionEvaluator` directly in a custom condition | The interface has no `init()` or `addParameterDefinitions()` support; the evaluator is never registered with the Action Service | Extend `ActionConditionEvaluatorAbstractBase` — the abstract base calls `init()` automatically when wired with `parent="action-condition-evaluator"` |
+| Overriding `evaluate()` instead of `evaluateImpl()` in a condition evaluator | `evaluate()` is implemented by `ActionConditionEvaluatorAbstractBase` and must not be overridden — it handles pre/post logic and calls `evaluateImpl()` | Override `protected boolean evaluateImpl(ActionCondition, NodeRef)` only |
+| Using `parent="action-executer"` for a condition evaluator bean | `action-executer` registers the bean as an action, not a condition; the evaluator will not appear in the rule condition list | Use `parent="action-condition-evaluator"` |
 | `@PostConstruct` or `ApplicationReadyEvent` for repository data initialisation | Fires on every ACS restart, creating duplicate folders, categories, or nodes on each server start | Extend `AbstractModuleComponent` with `parent="module.baseComponent"` — the framework tracks execution in the DB and runs `executeInternal()` exactly once per `sinceVersion` |
 | Extending `AbstractLifecycleBean` for a data bootstrap loader | `AbstractLifecycleBean` does not integrate with the module component tracking system; provides no idempotency guarantee | Extend `AbstractModuleComponent` instead |
 | Hardcoding a `NodeRef` string for Company Home or other well-known locations in a bootstrap loader | NodeRef UUIDs differ between repositories; hardcoded refs break on any install other than the original | Use `nodeLocatorService.getNode("companyhome", null, null)` |
