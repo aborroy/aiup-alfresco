@@ -22,7 +22,7 @@ GENERATED_BASE="$SCRIPT_DIR/generated"
 
 usage() {
     printf 'Usage: %s <scenario> [<generated-dir>]\n' "$(basename "$0")"
-    printf 'Scenarios: maven-sdk-baseline content-types actions behaviours web-scripts workflows scheduled-jobs bootstrap-loader rule-conditions repository-patch\n'
+    printf 'Scenarios: maven-sdk-baseline content-types actions behaviours web-scripts workflows scheduled-jobs bootstrap-loader rule-conditions repository-patch transforms\n'
 }
 
 [[ $# -lt 1 ]] && { usage >&2; exit 1; }
@@ -43,6 +43,7 @@ ref_path_for() {
         bootstrap-loader)   echo "docs/maven-sdk/maven-sdk-tutorial" ;;
         rule-conditions)    echo "docs/actions/actions-tutorial" ;;
         repository-patch)   echo "docs/maven-sdk/maven-sdk-tutorial" ;;
+        transforms)         echo "docs/maven-sdk/maven-sdk-tutorial" ;;
         *) return 1 ;;
     esac
 }
@@ -90,6 +91,9 @@ if [[ "$FILE_COUNT" -eq 0 ]]; then
                             printf '    3. Copy generated files to: %s/\n' "$GEN_DIR" ;;
         repository-patch)   printf '    1. Copy scenarios/%s/REQUIREMENTS.md to a working dir\n' "$SCENARIO"
                             printf '    2. Run: /scaffold  /content-model  /repository-patch\n'
+                            printf '    3. Copy generated files to: %s/\n' "$GEN_DIR" ;;
+        transforms)         printf '    1. Copy scenarios/%s/REQUIREMENTS.md to a working dir\n' "$SCENARIO"
+                            printf '    2. Run: /scaffold  /transforms\n'
                             printf '    3. Copy generated files to: %s/\n' "$GEN_DIR" ;;
     esac
     exit 0

@@ -508,6 +508,90 @@ environment:
 
 ---
 
+## Transform & Rendition Model
+
+> ACS 26.1 uses an **out-of-process Transform Service** architecture. Rendition definitions
+> live in the Platform JAR; actual conversion logic runs in a separate container.
+> Before building a custom transform engine, verify that the required source→target mimetype
+> pair is not already covered by `alfresco-transform-core-aio` (ImageMagick, LibreOffice,
+> PDFRenderer, Tika).
+
+### Technology
+
+| Component | Version | Role |
+|-----------|---------|------|
+| Rendition Service 2 | ACS 26.1 built-in | Routes rendition requests to transforms |
+| `alfresco-transform-core-aio` | 5.4.0 | All-in-one container: ImageMagick, LibreOffice, PDFRenderer, Tika |
+| Custom engine parent POM | `org.alfresco:alfresco-transform-core:5.4.0` | SDK for building custom engines |
+
+### File Placement
+
+| Artifact | Location |
+|----------|----------|
+| Rendition definition bean | `src/main/resources/alfresco/module/{module-id}/context/rendition-context.xml` (Platform JAR) |
+| MIME type registration | `src/main/resources/alfresco/extension/mimetype/mimetypes-extension-map.xml` (Platform JAR) |
+| Custom engine `TransformEngine` | `{engine-name}/src/main/java/{package}/transform/{EngineName}Engine.java` (separate project) |
+| Custom engine `CustomTransformer` | `{engine-name}/src/main/java/{package}/transform/{EngineName}Transformer.java` (separate project) |
+| Engine config JSON | `{engine-name}/src/main/resources/{engineName}_engine_config.json` (separate project) |
+| Dockerfile | `{engine-name}/Dockerfile` (separate project) |
+
+### Rendition Definition Pattern (Platform JAR)
+
+```xml
+<bean id="{prefix}.rendition.{renditionName}"
+      class="org.alfresco.repo.rendition2.RenditionDefinition2Impl">
+    <constructor-arg name="renditionName"   value="{renditionName}"/>
+    <constructor-arg name="targetMimetype"  value="{targetMimetype}"/>
+    <constructor-arg name="transformOptions">
+        <map>
+            <entry key="resizeWidth"         value="200"/>
+            <entry key="resizeHeight"        value="200"/>
+            <entry key="maintainAspectRatio" value="true"/>
+            <entry key="thumbnail"           value="true"/>
+            <entry key="timeout"
+                   value="${system.thumbnail.definition.default.timeoutMs}"/>
+        </map>
+    </constructor-arg>
+    <constructor-arg name="registry" ref="renditionDefinitionRegistry2"/>
+</bean>
+```
+
+- Use `RenditionDefinition2Impl` — the ACS 26.1 Rendition Service 2 class.
+- Pass `registry` ref pointing at `renditionDefinitionRegistry2` — auto-registers on construction.
+- Always include a `timeout` entry using the system property.
+
+### MIME Type Registration (Platform JAR)
+
+```xml
+<!-- alfresco/extension/mimetype/mimetypes-extension-map.xml -->
+<alfresco-config area="mimetype-map">
+    <config evaluator="string-compare" condition="Mimetype Map">
+        <mimetypes>
+            <mimetype mimetype="{newMimetype}" display="{Display Name}">
+                <extension>{ext}</extension>
+            </mimetype>
+        </mimetypes>
+    </config>
+</alfresco-config>
+```
+
+This file uses Alfresco config XML format (not Spring). ACS auto-discovers it from
+`alfresco/extension/mimetype/` on the classpath — no `<import>` in `module-context.xml` needed.
+
+### Custom Engine Pattern (Spring Boot, separate project)
+
+A custom engine is a standalone Spring Boot app with parent `org.alfresco:alfresco-transform-core:5.4.0`.
+
+**Two interfaces to implement:**
+- `TransformEngine` — declares engine name, startup message, config, and health-probe transform.
+- `CustomTransformer` — implements `transform(sourceMimetype, inputStream, targetMimetype, outputStream, options, manager)`.
+
+The engine name returned by `getTransformerName()` must match the `transformerName` in `engine_config.json`.
+
+Engine exposes port `8090`. Register it in `compose.yaml` with a `depends_on` from the `alfresco` service.
+
+---
+
 ## Repository Patch Model
 
 > The Maven In-Process SDK (Platform JAR) is the only deployment target for repository patches.
@@ -1008,6 +1092,9 @@ These patterns must **never** appear in generated code. Actively check for and r
 | Synchronous external HTTP calls inside service tasks or task listeners | Runs inside the ACS transaction; timeouts cause transaction rollback and workflow state corruption | Use Alfresco Action Service to queue async work; or use a separate boundary event for external integration |
 | Registering BPMN files via `dictionaryModelBootstrap` | `dictionaryModelBootstrap` does not know about Activiti's process engine — BPMN files are silently ignored | Use a separate `workflowDeployer` bean |
 | Omitting `bpm` import from workflow model XML | Workflow task types extend `bpm:startTask` or `bpm:activitiOutcomeTask` — the import is mandatory | Always add `<import uri="http://www.alfresco.org/model/bpm/1.0" prefix="bpm"/>` |
+| Using the legacy `RenditionDefinition` (Rendition Service 1) class for new renditions | Rendition Service 1 is deprecated in ACS 26.1; renditions defined with the old API may not fire through the out-of-process Transform Service | Use `org.alfresco.repo.rendition2.RenditionDefinition2Impl` with `registry` ref `renditionDefinitionRegistry2` |
+| Registering MIME types via Spring beans | The mimetype service does not discover Spring beans; the MIME type will not be registered | Place a `mimetypes-extension-map.xml` file under `alfresco/extension/mimetype/` using Alfresco config XML format |
+| Building a custom transform engine for a mimetype pair already in `alfresco-transform-core-aio` | Duplicates work, adds infrastructure complexity, and may conflict with the AIO container's routing | Verify coverage in ImageMagick, LibreOffice, PDFRenderer, and Tika before building a custom engine |
 | Implementing `Patch` interface directly in a custom patch | The interface has no transaction management, no schema version checking, and no `alf_applied_patch` recording | Extend `AbstractPatch` — it handles all lifecycle, transaction, and recording automatically |
 | Declaring `nodeService`, `searchService`, or `transactionService` as fields in a patch class | `basePatch` already injects these as `protected` fields on `AbstractPatch`; redeclaring them as new fields shadows the injected ones and causes `NullPointerException` | Use the inherited `protected` fields directly — do not re-declare or re-inject them |
 | Not closing `ResultSet` in a patch | Open `ResultSet` objects hold database cursors; failing to close them causes resource exhaustion in long-running patches | Always close `ResultSet` in a `finally` block: `if (results != null) results.close()` |

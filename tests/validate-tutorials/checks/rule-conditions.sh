@@ -22,7 +22,7 @@ else
     _fail "module.properties exists" "not found under $GEN"
 fi
 
-MODULE_CTX=$(find "$GEN" -name "module-context.xml" | head -1)
+MODULE_CTX=$(find "$GEN" -name "module-context.xml" -not -path "*/target/*" | head -1)
 if [[ -n "$MODULE_CTX" ]]; then
     assert_grep "context" "$MODULE_CTX" "module-context.xml has a context import"
 else
