@@ -34,11 +34,12 @@ cmds_for() {
         rule-conditions)    echo "scaffold content-model rule-conditions" ;;
         repository-patch)   echo "scaffold content-model repository-patch" ;;
         transforms)         echo "scaffold transforms" ;;
+        aca-extension)      echo "aca-extension" ;;
         *) return 1 ;;
     esac
 }
 
-ALL_SCENARIOS="maven-sdk-baseline content-types actions behaviours web-scripts workflows scheduled-jobs bootstrap-loader rule-conditions repository-patch transforms"
+ALL_SCENARIOS="maven-sdk-baseline content-types actions behaviours web-scripts workflows scheduled-jobs bootstrap-loader rule-conditions repository-patch transforms aca-extension"
 TARGETS="${*:-$ALL_SCENARIOS}"
 
 PASS=0

@@ -1086,12 +1086,104 @@ Always discover `processDefinitionId` dynamically from `GET /process-definitions
 
 ---
 
+## ACA / ADW Extension Model
+
+> ACA/ADW extensions are **source drop-ins**, not npm packages. The extension folder is
+> copied into an existing ACA or ADW source checkout and compiled as part of the host
+> application's build. There is no Maven build, no Platform JAR, and no separate npm publish
+> step. Reference: `https://github.com/aborroy/alfresco-content-lake-ui`
+
+### Technology
+
+| Component | Version | Role |
+|-----------|---------|------|
+| Angular | 19.x | Component framework |
+| ADF (`@alfresco/adf-core`, `@alfresco/adf-extensions`) | 8.4.x | ACA/ADW component library and extension SPI |
+| NgRx (`@ngrx/effects`) | — | Side-effect handling for plugin actions |
+| `@alfresco/js-api` | — | Typed Alfresco REST API client |
+
+### Extension Structure
+
+```
+{ext-name}/
+├── src/
+│   ├── assets/{ext-name}.plugin.json   # ADF extension manifest (JSON)
+│   ├── lib/
+│   │   ├── components/                 # Standalone Angular components
+│   │   ├── services/                   # Injectable services using AppConfigService
+│   │   ├── store/                      # NgRx actions + effects
+│   │   └── models/                     # TypeScript interfaces only
+│   ├── {ext-name}.module.ts            # provideExtension() + @NgModule compat shim
+│   └── public-api.ts
+```
+
+### Plugin Manifest (`plugin.json`)
+
+Declares all extension points declaratively. Extension points available:
+
+| Section | What it adds |
+|---------|-------------|
+| `routes` | A new Angular route (full page) |
+| `features.navbar` | Left-nav entry pointing at the route |
+| `features.toolbar` | Button in the document-list or viewer toolbar |
+| `features.contextMenu` | Right-click menu item |
+| `features.sidebar.tabs` | New tab in the ACA info drawer |
+
+`actions` define NgRx action type strings dispatched when the user clicks. `rules.visible`
+controls conditional display using ADF rule evaluators (e.g. `app.selection.file`).
+
+### Providers Function Pattern
+
+```typescript
+export function provide{ExtName}Extension(): (Provider | EnvironmentProviders)[] {
+  return [
+    provideExtensionConfig(['{ext-name}.plugin.json']),
+    provideEffects({ExtName}Effects),
+    {
+      provide: APP_INITIALIZER,
+      useFactory: register{ExtName}Components,
+      deps: [ExtensionService],
+      multi: true
+    }
+  ];
+}
+```
+
+- Register components with `ExtensionService.setComponents()` inside the `APP_INITIALIZER` factory.
+- The `APP_INITIALIZER` factory runs before routing resolves; registration must happen here.
+- Expose a deprecated `@NgModule` shim for ADW compatibility.
+
+### Service Pattern
+
+```typescript
+@Injectable({ providedIn: 'root' })
+export class {ServiceName}Service {
+  private baseUrl = this.appConfig.get<string>(
+    'plugins.{extPrefix}Service.baseUrl', '/default-url'
+  );
+  constructor(private http: HttpClient, private appConfig: AppConfigService) {}
+}
+```
+
+### Integration Patches (applied to the ACA/ADW source)
+
+Three files in the host app must be patched after copying the extension folder:
+
+1. `app/src/app/extensions.module.ts` — import and spread `provide{ExtName}Extension()`
+2. `app/project.json` — add `{ext-name}.plugin.json` to `build.options.assets`
+3. `app/src/app.config.json` — add `plugins.{extPrefix}Service.baseUrl`
+
+---
+
 ## Forbidden Patterns
 
 These patterns must **never** appear in generated code. Actively check for and reject them.
 
 | Pattern | Reason | Alternative |
 |---------|--------|-------------|
+| Declaring an ACA/ADW Angular component in `@NgModule` `imports` or `declarations` | ACA/ADW extension components must be `standalone: true` and registered with `ExtensionService.setComponents()` via `APP_INITIALIZER` — not through NgModule metadata | Use `standalone: true` and register via `extensions.setComponents()` |
+| Hardcoding backend API URLs in Angular services or components | URLs differ between dev, staging, and production; hardcoded paths break proxy configuration | Read from `AppConfigService` using `plugins.{extPrefix}Service.baseUrl` |
+| Generating a separate Angular `package.json` and `npm install` step for an ACA extension | ACA/ADW extensions are source drop-ins compiled as part of the host app — they share the host's `node_modules` | Copy the extension folder into `projects/` (ACA) or `libs/` (ADW Nx); no separate `package.json` |
 | Direct Hibernate/JPA access | Bypasses Alfresco service layer and permissions | Use `NodeService`, `ContentService` |
 | `AuthenticationUtil.runAsSystem` in user-facing code | Privilege escalation | Use `runAs(userName)` or proper permission checks |
 | Hardcoded credentials | Security vulnerability | Environment variables or encrypted properties |

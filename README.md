@@ -124,6 +124,7 @@ See [PORTABILITY.md](./PORTABILITY.md) for the non-Claude workflow.
 | `/rule-conditions` | In-Process | Any | Custom `ActionConditionEvaluatorAbstractBase` rule condition with parameter definitions, Spring registration, and unit test |
 | `/repository-patch` | In-Process | Any | `AbstractPatch` data migration patch with schema version range, `basePatch` registration in `patch-context.xml`, and unit test |
 | `/transforms` | In-Process + Out-of-Process | Any | `RenditionDefinition2Impl` rendition definition; optional MIME type registration; optional custom `TransformEngine` + `CustomTransformer` Spring Boot engine project with `engine_config.json` and `Dockerfile` |
+| `/aca-extension` | ACA/ADW (Angular) | Any | Full ACA/ADW UI extension: `plugin.json` manifest, `provideExtension()` providers function, NgRx actions + effects, Angular standalone components (page, sidebar), HTTP service, and integration patch instructions |
 | `/share-config` | Share JAR | Any | `share-config-custom.xml` + Share message bundle + optional evaluator stub |
 | `/surf` | Share JAR | Any | Surf extension metadata + page/component web scripts + optional message bundle/evaluator |
 | `/aikau` | Share JAR | Any | Aikau page descriptors + page-model JS + optional widget module/message bundle |
@@ -326,4 +327,4 @@ The current workflow covers the core Alfresco extension paths first. The followi
 - ~~**Bootstrap and upgrade mechanics**~~ — delivered: `/bootstrap-loader` (initial data), `/repository-patch` (data migration)
 - ~~**Rule framework extras** (rule conditions)~~ — delivered: `/rule-conditions`; admin-facing rule UI configuration (Share) remains planned
 - ~~**Custom transforms and renditions**~~ — delivered: `/transforms`
-- **UI extensions**: Share/Surf/Aikau extensions, Share forms, dashlets, evaluators, and ADF/ACA/ADW frontends
+- ~~**UI extensions** (ACA/ADW)~~ — delivered: `/aca-extension`; Share/Surf/Aikau already covered by `/share-config`, `/surf`, `/aikau`
