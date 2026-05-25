@@ -508,6 +508,113 @@ environment:
 
 ---
 
+## Scheduled Job Model
+
+> The Maven In-Process SDK (Platform JAR) is the only deployment target for scheduled jobs. They run inside the ACS JVM using the embedded Quartz scheduler.
+
+### Technology
+
+ACS 26.1 embeds **Quartz 2.x** managed by the `schedulerFactory` bean. All scheduled jobs must use the Alfresco cluster-safe abstraction.
+
+**Do NOT** use Spring's `@Scheduled` annotation in a Platform JAR. It is not wired to Quartz or the `JobLockService`, so it fires on every node in a cluster simultaneously.
+
+### File Placement
+
+| Artifact | Path |
+|----------|------|
+| Job class (Quartz entry point) | `src/main/java/{package}/job/{JobName}Job.java` |
+| Executer class (business logic) | `src/main/java/{package}/job/{JobName}JobExecuter.java` |
+| Scheduler Spring context | `src/main/resources/alfresco/module/{module-id}/context/scheduler-context.xml` |
+| Unit test | `src/test/java/{package}/job/{JobName}JobExecuterTest.java` |
+
+### Naming Conventions
+
+- **Job class**: `{JobName}Job.java` — extends `AbstractScheduledLockedJob`
+- **Executer class**: `{JobName}JobExecuter.java` — plain Spring bean, no Quartz dependency
+- **Bean IDs**: `{prefix}.{jobName}Executer`, `{prefix}.{jobName}JobDetail`, `{prefix}.{jobName}Trigger`
+- **Cron property key**: `{prefix}.{jobName}.cron` with a sensible default
+- **Enabled property key**: `{prefix}.{jobName}.enabled` defaulting to `true`
+
+### Spring Registration Pattern
+
+```xml
+<!-- Executer holds all business logic -->
+<bean id="{prefix}.{jobName}Executer"
+      class="{package}.job.{JobName}JobExecuter">
+    <property name="retryingTransactionHelper" ref="retryingTransactionHelper"/>
+    <property name="serviceRegistry"           ref="ServiceRegistry"/>
+</bean>
+
+<!-- Job detail wires Quartz to the executer -->
+<bean id="{prefix}.{jobName}JobDetail"
+      class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+    <property name="jobClass" value="{package}.job.{JobName}Job"/>
+    <property name="jobDataAsMap">
+        <map>
+            <entry key="executer" value-ref="{prefix}.{jobName}Executer"/>
+        </map>
+    </property>
+</bean>
+
+<!-- Trigger: cron and enabled are property-configurable with defaults -->
+<bean id="{prefix}.{jobName}Trigger"
+      class="org.alfresco.util.CronTriggerBean">
+    <property name="jobDetail"      ref="{prefix}.{jobName}JobDetail"/>
+    <property name="scheduler"      ref="schedulerFactory"/>
+    <property name="cronExpression" value="${{prefix}.{jobName}.cron:{cronDefault}}"/>
+    <property name="enabled"        value="${{prefix}.{jobName}.enabled:true}"/>
+    <property name="startDelay"     value="240000"/>
+</bean>
+```
+
+- `startDelay` must be at least `240000` ms (4 minutes) so ACS fully initialises before first execution.
+- Cron expressions are Quartz 6-field format: `seconds minutes hours dayOfMonth month dayOfWeek`.
+  Common examples: `0 0 0 * * ?` (midnight daily), `0 0/30 * * * ?` (every 30 minutes).
+- Register `scheduler-context.xml` by adding an `<import>` to `module-context.xml`.
+
+### Job Class Pattern
+
+```java
+public class {JobName}Job extends AbstractScheduledLockedJob {
+    private {JobName}JobExecuter executer;
+
+    @Override
+    public void executeJob(JobExecutionContext context) throws JobExecutionException {
+        executer.execute();
+    }
+
+    public void setExecuter({JobName}JobExecuter executer) {
+        this.executer = executer;
+    }
+}
+```
+
+- The Job class must be **stateless** — no Alfresco service fields, no shared mutable state.
+- `AbstractScheduledLockedJob` acquires a `JobLockService` lock before calling `executeJob()`,
+  preventing concurrent execution on cluster nodes.
+
+### Executer Class Pattern
+
+```java
+public class {JobName}JobExecuter {
+    private RetryingTransactionHelper retryingTransactionHelper;
+    private ServiceRegistry serviceRegistry;
+
+    public void execute() {
+        retryingTransactionHelper.doInTransaction(() -> {
+            // business logic
+            return null;
+        }, false, true);
+    }
+    // setter injection only — no @Autowired
+}
+```
+
+- Wrap every repository operation in `retryingTransactionHelper.doInTransaction()`.
+- The executer is a plain POJO: no Quartz imports, no `@Transactional`. This makes it testable with Mockito without starting Quartz or ACS.
+
+---
+
 ## Workflow Model
 
 > The Maven In-Process SDK (Platform JAR) is the only deployment target for workflows. Workflows deploy into the ACS JVM alongside other platform code.
@@ -676,3 +783,7 @@ These patterns must **never** appear in generated code. Actively check for and r
 | Synchronous external HTTP calls inside service tasks or task listeners | Runs inside the ACS transaction; timeouts cause transaction rollback and workflow state corruption | Use Alfresco Action Service to queue async work; or use a separate boundary event for external integration |
 | Registering BPMN files via `dictionaryModelBootstrap` | `dictionaryModelBootstrap` does not know about Activiti's process engine — BPMN files are silently ignored | Use a separate `workflowDeployer` bean |
 | Omitting `bpm` import from workflow model XML | Workflow task types extend `bpm:startTask` or `bpm:activitiOutcomeTask` — the import is mandatory | Always add `<import uri="http://www.alfresco.org/model/bpm/1.0" prefix="bpm"/>` |
+| `@Scheduled` in a Platform JAR | Spring's `@Scheduled` is not integrated with Quartz or `JobLockService`; fires on every cluster node simultaneously causing duplicate work and data corruption | Extend `AbstractScheduledLockedJob`, register via `CronTriggerBean` wired to `schedulerFactory` |
+| `@Transactional` on a scheduled job executer method | Alfresco's transaction infrastructure is managed by `RetryingTransactionHelper`, not Spring's `@Transactional` proxy | Wrap repository calls in `retryingTransactionHelper.doInTransaction()` |
+| Quartz `startDelay` below 240000 ms | ACS may not have fully initialised (dictionary, subsystems, indexes) when the job first fires, causing `NullPointerException` or `ServiceUnavailableException` | Always set `startDelay` to at least `240000` (4 minutes) on `CronTriggerBean` |
+| Alfresco service references as fields on a Quartz `Job` class | Quartz re-instantiates the Job class for each execution; injected fields are lost | Keep the Job class stateless; inject services into the Executer bean instead |

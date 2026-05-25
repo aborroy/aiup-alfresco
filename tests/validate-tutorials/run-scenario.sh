@@ -22,7 +22,7 @@ GENERATED_BASE="$SCRIPT_DIR/generated"
 
 usage() {
     printf 'Usage: %s <scenario> [<generated-dir>]\n' "$(basename "$0")"
-    printf 'Scenarios: maven-sdk-baseline content-types actions behaviours web-scripts workflows\n'
+    printf 'Scenarios: maven-sdk-baseline content-types actions behaviours web-scripts workflows scheduled-jobs\n'
 }
 
 [[ $# -lt 1 ]] && { usage >&2; exit 1; }
@@ -39,6 +39,7 @@ ref_path_for() {
         behaviours)         echo "docs/behaviors/behavior-tutorial" ;;
         web-scripts)        echo "docs/webscripts/webscripts-tutorial" ;;
         workflows)          echo "docs/workflow/workflow-tutorial" ;;
+        scheduled-jobs)     echo "docs/maven-sdk/maven-sdk-tutorial" ;;
         *) return 1 ;;
     esac
 }
@@ -74,6 +75,9 @@ if [[ "$FILE_COUNT" -eq 0 ]]; then
                             printf '    3. Copy generated files to: %s/\n' "$GEN_DIR" ;;
         workflows)          printf '    1. Copy scenarios/%s/REQUIREMENTS.md to a working dir\n' "$SCENARIO"
                             printf '    2. Run: /scaffold  /content-model  /workflow\n'
+                            printf '    3. Copy generated files to: %s/\n' "$GEN_DIR" ;;
+        scheduled-jobs)     printf '    1. Copy scenarios/%s/REQUIREMENTS.md to a working dir\n' "$SCENARIO"
+                            printf '    2. Run: /scaffold  /content-model  /scheduled-jobs\n'
                             printf '    3. Copy generated files to: %s/\n' "$GEN_DIR" ;;
     esac
     exit 0

@@ -29,11 +29,12 @@ cmds_for() {
         behaviours)         echo "scaffold content-model behaviours" ;;
         web-scripts)        echo "scaffold content-model web-scripts" ;;
         workflows)          echo "scaffold content-model workflow" ;;
+        scheduled-jobs)     echo "scaffold content-model scheduled-jobs" ;;
         *) return 1 ;;
     esac
 }
 
-ALL_SCENARIOS="maven-sdk-baseline content-types actions behaviours web-scripts workflows"
+ALL_SCENARIOS="maven-sdk-baseline content-types actions behaviours web-scripts workflows scheduled-jobs"
 TARGETS="${*:-$ALL_SCENARIOS}"
 
 PASS=0
