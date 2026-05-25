@@ -35,6 +35,7 @@ Add to `{platform-project-root}/src/main/resources/alfresco/module/{module-id}/c
 ```
 
 ## Conventions
+- `{module-id}` is the Platform JAR **artifactId** — the bare artifact ID (e.g. `actions`), not the full `module.id` property value (e.g. `com.someco.actions`). Derive it as `{platform-artifactId}` from Section 2 of `REQUIREMENTS.md` or from `<artifactId>` in the platform `pom.xml`. **Never use `{groupId}.{artifactId}` as the directory name.**
 - `{platform-project-root}` is `.` for Platform JAR only mode, or `{name}-platform/` for Mixed mode
 - Action name format: `{prefix}-{action-name}`
 - Use parent `action-executer` bean

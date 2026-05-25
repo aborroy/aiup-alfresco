@@ -30,6 +30,7 @@ project's `Root path` from Section 2 (Project Architecture).
 Add bean definition to `{platform-project-root}/src/main/resources/alfresco/module/{module-id}/context/service-context.xml`
 
 ## Conventions
+- `{module-id}` is the Platform JAR **artifactId** — the bare artifact ID (e.g. `behaviours`), not the full `module.id` property value (e.g. `com.someco.behaviours`). Derive it as `{platform-artifactId}` from Section 2 of `REQUIREMENTS.md` or from `<artifactId>` in the platform `pom.xml`. **Never use `{groupId}.{artifactId}` as the directory name.**
 - `{platform-project-root}` is `.` for Platform JAR only mode, or `{name}-platform/` for Mixed mode
 - Use `JavaBehaviour` with `NotificationFrequency.TRANSACTION_COMMIT` (default) or `EVERY_EVENT` where specified
 - Bind to specific types/aspects from the content model

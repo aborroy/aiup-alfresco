@@ -1,0 +1,5 @@
+# Generated artefacts — reproduced by generate-all.sh, not tracked in git
+*
+!.gitignore
+!*/
+!*/.gitkeep

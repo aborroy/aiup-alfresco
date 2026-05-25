@@ -239,7 +239,7 @@ module.repo.version.min=26.1
 - **Dictionary bootstrap parent**: `dictionaryModelBootstrap`
 
 ### Web Script API Paths
-- **Custom Web Scripts**: `/alfresco/s/api/{prefix}/{resource}`
+- **Custom Web Scripts**: `/api/{prefix}/{resource}`
 - Resource names: plural nouns, kebab-case
 - No verbs in paths
 - Web Script descriptor file: `{resource}.{method}.desc.xml` — e.g. `invoices.get.desc.xml`

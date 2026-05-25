@@ -23,7 +23,7 @@ Read `REQUIREMENTS.md` to identify workflow requirements:
 
 3. From Section 2, derive:
    - `{platform-project-root}` — `.` for Platform JAR only mode; `{name}-platform/` for Mixed mode
-   - `{module-id}` — the Platform JAR module's artifact ID
+   - `{module-id}` — the Platform JAR **artifactId** (bare artifact ID, e.g. `workflows`). Read from `<artifactId>` in the platform `pom.xml` or derive as `{platform-artifactId}` from Section 2. **Never use the full `module.id` property value (e.g. `com.someco.workflows`) as the directory name.**
    - `{java-package}` — the Java package declared in Section 2
    - `{prefix}` — the namespace prefix declared in Section 5 (Content Model Requirements)
 
@@ -36,6 +36,12 @@ Read `REQUIREMENTS.md` to identify workflow requirements:
 ---
 
 ## Output Files
+
+> **All four artefacts below are required and must be generated together in a single run:**
+> the BPMN process definition, the workflow task content model XML, the Spring bootstrap
+> registration, and the i18n message bundle. Never generate only a subset.
+> The optional Java task listener (artefact 5) is generated only when the requirements
+> describe custom Java logic in a task listener.
 
 ### 1. BPMN Process Definition
 `{platform-project-root}/src/main/resources/alfresco/module/{module-id}/workflow/{processName}.bpmn`

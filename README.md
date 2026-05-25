@@ -200,10 +200,13 @@ Notes:
 
 Skills are invoked automatically by Claude during command execution:
 
-- **content-model-validator** — validates model XML structure and naming *(In-Process)*
-- **docker-compose-healthcheck-injector** — ensures healthchecks on all services *(Both)*
+- **content-model-validator** — validates model XML structure and naming conventions *(In-Process)*
+- **docker-compose-healthcheck-injector** — ensures every service has a healthcheck block *(Both)*
 - **sdk-version-detector** — detects In-Process vs Out-of-Process SDK and adjusts generated code *(Both)*
 - **event-api-topology-checker** — validates ActiveMQ topic names and event consumer patterns *(Out-of-Process)*
+- **workflow-bpmn-validator** — validates Activiti BPMN and companion workflow model XML *(In-Process)*
+- **migration-advisor** — detects deprecated Alfresco APIs and suggests modern replacements *(Both)*
+- **permission-aware-query-builder** — warns on ACL bypass issues in search and query code *(In-Process)*
 
 ## Agents
 

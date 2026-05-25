@@ -98,6 +98,7 @@ public interface {Name}Model {
 - Never expose this interface as a Spring bean — it is a pure Java constant holder
 
 ## Conventions
+- `{module-id}` is the Platform JAR **artifactId** exactly as declared in `module.properties` under `module.id` minus the `{groupId}.` prefix — i.e. the bare artifact ID (e.g. `content-types`, not `com.someco.content-types`). Read it from `<artifactId>` in the platform `pom.xml`, or derive it as `{platform-artifactId}` from Section 2 of `REQUIREMENTS.md`. **Never use the full `module.id` property value as the directory name.**
 - `{platform-project-root}` is `.` for Platform JAR only mode, or `{name}-platform/` for Mixed mode
 - Follow namespace naming from AGENTS.md
 - Use `cm:content` as default parent for document types
