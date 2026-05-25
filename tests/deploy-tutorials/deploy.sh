@@ -62,7 +62,9 @@ build_scenario() {
             ;;
         out-of-process)
             printf '[%s] Building Maven project...\n' "$SCENARIO"
-            (cd "$COMPOSE_DIR" && mvn clean package -q -DskipTests)
+            # -Dlicense.skip=true: alfresco-java-sdk parent enforces Apache 2.0 headers;
+            # generated files omit headers for brevity — skip in deploy tests.
+            (cd "$COMPOSE_DIR" && mvn clean package -q -DskipTests -Dlicense.skip=true)
             ;;
         transforms)
             printf '[%s] Building Maven project...\n' "$SCENARIO"

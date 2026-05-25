@@ -384,6 +384,7 @@ module.repo.version.min={acs-version}
         <dependency>
             <groupId>org.alfresco</groupId>
             <artifactId>alfresco-java-event-api-spring-boot-starter</artifactId>
+            <version>7.2.0</version>
         </dependency>
 
         <!-- JUnit 5 + Mockito for unit and integration tests -->
@@ -399,6 +400,13 @@ module.repo.version.min={acs-version}
         </dependency>
     </dependencies>
 
+    <repositories>
+        <repository>
+            <id>alfresco-public</id>
+            <url>https://artifacts.alfresco.com/nexus/content/groups/public</url>
+        </repository>
+    </repositories>
+
     <build>
         <plugins>
             <plugin>
@@ -411,7 +419,9 @@ module.repo.version.min={acs-version}
 ```
 
 **Rules:**
-- Do NOT specify a `<version>` for `alfresco-java-event-api-spring-boot-starter` — managed by the SDK parent BOM
+- Always specify `<version>7.2.0</version>` for `alfresco-java-event-api-spring-boot-starter` — it is **not** managed by `alfresco-java-sdk` BOM; the version must match the SDK parent version
+- Always include the `alfresco-public` Nexus repository — `alfresco-java-event-api-spring-boot-starter` and the SDK parent are on Alfresco Nexus, not Maven Central
+- **All Java source files must start with the Apache 2.0 license header** — the `alfresco-java-sdk` parent POM enforces this via the `license-maven-plugin:check` goal. Generate the header on every `.java` file or the build fails with `Some files do not have the expected license header`
 - `spring-boot-maven-plugin` is required to produce an executable fat JAR
 - In Mode D, the Event Handler child module still keeps `alfresco-java-sdk` as its parent; the root aggregator is **not** this POM's parent
 
@@ -422,6 +432,21 @@ module.repo.version.min={acs-version}
 *(Mode C at repo root; Mode D under `{artifactId}-events/`.)*
 
 ```java
+/*
+ * Copyright {year} Alfresco Software, Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package {java-package};
 
 import org.springframework.boot.SpringApplication;

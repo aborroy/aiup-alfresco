@@ -117,6 +117,7 @@ Key dependency (event-driven integration):
 <dependency>
     <groupId>org.alfresco</groupId>
     <artifactId>alfresco-java-event-api-spring-boot-starter</artifactId>
+    <version>7.2.0</version>
 </dependency>
 ```
 
@@ -1227,5 +1228,6 @@ These patterns must **never** appear in generated code. Actively check for and r
 | Alfresco service references as fields on a Quartz `Job` class | Quartz re-instantiates the Job class for each execution; injected fields are lost | Keep the Job class stateless; inject services into the Executer bean instead |
 | Two `AbstractModuleComponent` beans with the same `name` property in the same module | The framework keys execution records by `moduleId + name + sinceVersion`; duplicate names cause one loader to silently overwrite the other's execution record | Give each bootstrap loader a unique `name` value (e.g. `FoldersBootstrapLoader`, `CategoriesBootstrapLoader`) |
 | Non-unique patch `id` property across modules | `alf_applied_patch.id` is a unique key; if two modules declare the same id, the second patch is silently skipped | Always prefix patch IDs with the module ID: `patch.{module-id}.{uniqueName}` |
+| Missing Apache 2.0 license header on Java source files in an Out-of-Process Spring Boot project | The `alfresco-java-sdk` parent POM runs `license-maven-plugin:check` during the validate phase; files without the header cause `BUILD FAILURE: Some files do not have the expected license header` | Add the Apache 2.0 license header block at the top of every generated `.java` file in Out-of-Process projects |
 | Adding `solr6` or `elasticsearch` to the `alfresco` service's `depends_on` in compose.yaml | Creates a circular dependency: `alfresco → solr6 → alfresco`. Solr/OpenSearch discovers ACS after startup — ACS does not need to wait for them | The `alfresco` service depends only on `postgres`, `activemq`, and `transform-core-aio`. Solr/OpenSearch depend on `alfresco`. |
 | Accessing Alfresco repository services directly inside a Spring Boot Out-of-Process event listener | The event listener runs in a separate JVM with no access to `NodeService`, `ContentService`, or other repository beans | Call the Alfresco REST API (e.g. `/alfresco/api/-default-/public/alfresco/versions/1/nodes/{nodeId}`) or delegate to a repository action via the Action REST API |
