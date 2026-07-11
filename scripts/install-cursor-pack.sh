@@ -61,6 +61,15 @@ copy_executable_if_missing() {
     fi
 }
 
+copy_executable() {
+    local src="$1"
+    local dest="$2"
+    mkdir -p "$(dirname "$dest")"
+    cp "$src" "$dest"
+    chmod +x "$dest"
+    printf '  installed: %s\n' "$dest"
+}
+
 while [ $# -gt 0 ]; do
     case "$1" in
         --aiup-path)
@@ -112,6 +121,11 @@ for hook in "$AIUP_ROOT/.cursor/hooks/"*.sh; do
     copy_executable_if_missing "$hook" "$dest"
 done
 
+printf '\nTraceability hook dependency:\n'
+mkdir -p "$CONSUMER_ROOT/scripts"
+copy_executable "$AIUP_ROOT/scripts/traceability-artefacts.sh" \
+    "$CONSUMER_ROOT/scripts/traceability-artefacts.sh"
+
 printf '\nGenerating slash-command skills:\n'
 "$AIUP_ROOT/scripts/build-cursor-skills.sh" \
     --aiup-prefix "$AIUP_PREFIX" \
@@ -128,7 +142,8 @@ Next steps:
   2. Confirm Rules and Hooks are enabled in Cursor settings.
   3. Add a local version override rule if your ACS/SDK versions differ from AGENTS.md.
   4. In Agent chat, type /requirements or /scaffold to start the AIUP workflow.
-  5. Re-run this script after 'git submodule update' to refresh skills.
+  5. Re-run this script after 'git submodule update' to refresh skills and
+     scripts/traceability-artefacts.sh (traceability hook dependency).
   6. Existing .cursor/hooks/*.sh files are preserved on re-run; delete a hook and
      re-run to adopt an upstream version, or copy manually from the aiup-alfresco checkout.
 

@@ -67,6 +67,13 @@ jobs:
         run: |
           chmod +x scripts/build-cursor-skills.sh scripts/install-cursor-pack.sh
           ./scripts/build-cursor-skills.sh
+          if [ -n "$(git status --porcelain .cursor/skills/)" ]; then
+            echo "ERROR: Committed .cursor/skills/ drifts from build-cursor-skills.sh output."
+            echo "Run ./scripts/build-cursor-skills.sh and commit the result."
+            git diff -- .cursor/skills/
+            git status --porcelain .cursor/skills/
+            exit 1
+          fi
           count=$(find .cursor/skills -name 'SKILL.md' | wc -l)
           echo "Found $count Cursor skills"
           cmd_count=$(find commands -maxdepth 1 -name '*.md' | wc -l)
@@ -95,6 +102,20 @@ jobs:
           grep -q 'tools/aiup-alfresco/AGENTS.md' "$tmp/skills/scaffold/SKILL.md"
           grep -q 'tools/aiup-alfresco/commands/scaffold.md' "$tmp/skills/scaffold/SKILL.md"
           rm -rf "$tmp"
+      - name: Verify consumer install copies traceability dependency
+        run: |
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          mkdir -p "$tmp/tools"
+          ln -s "$GITHUB_WORKSPACE" "$tmp/tools/aiup-alfresco"
+          cd "$tmp"
+          "$GITHUB_WORKSPACE/scripts/install-cursor-pack.sh"
+          test -f scripts/traceability-artefacts.sh
+          test -x scripts/traceability-artefacts.sh
+          # shellcheck source=/dev/null
+          source scripts/traceability-artefacts.sh
+          classify_traceability_artefact "src/main/java/com/example/job/MyJob.java"
+          [ "$ARTEFACT_TYPE" = "scheduled-job" ]
       - name: Verify traceability artefact classifier
         run: |
           chmod +x scripts/traceability-artefacts.sh
