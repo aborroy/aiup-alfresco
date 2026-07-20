@@ -1,6 +1,6 @@
 # aiup-alfresco
 
-A [Claude Code](https://claude.com/claude-code) plugin and portable prompt pack for Alfresco extension development. It packages the workflow as command specs, skills, and agents so the same repository guidance can be reused from Claude, Codex, OpenClaw, or another coding agent.
+A [Claude Code](https://claude.com/claude-code) plugin and portable prompt pack for Alfresco extension development. It packages the workflow as command specs, skills, and agents so the same repository guidance can be reused from Claude, Cursor, Codex, OpenClaw, or another coding agent.
 
 AIUP (AI Unified Process) is a spec-driven approach to AI-assisted development. This project applies AIUP principles to Alfresco extensions.
 
@@ -27,6 +27,17 @@ claude --plugin-dir /path/to/aiup-alfresco
 
 If you are using Codex, OpenClaw, or another agent, installation is optional; you can use the portable renderer below directly from the repository checkout.
 
+### Cursor
+
+1. Clone this repository and open it as the workspace root in Cursor (2.4+).
+2. Project rules (`.cursor/rules/aiup-alfresco.mdc`) and skills (`.cursor/skills/`) load automatically.
+3. In Agent chat, type **`/requirements`**, **`/scaffold`**, etc. to run AIUP workflow steps.
+4. Optional: enable **Hooks** in Cursor settings; ensure `.cursor/hooks/*.sh` are executable.
+5. After editing `skills/`, `agents/`, or `commands/`, regenerate Cursor skills: `./scripts/build-cursor-skills.sh`
+6. In another Alfresco project: submodule at `tools/aiup-alfresco/` and run `./tools/aiup-alfresco/scripts/install-cursor-pack.sh`
+
+Full guide: **[CURSOR.md](./CURSOR.md)** (slash commands, `@` references, hooks, consumer install).
+
 ## Portable Use Outside Claude
 
 The slash-command UX is Claude-specific, but the command logic is portable because it lives in `commands/*.md` and `AGENTS.md`.
@@ -50,13 +61,19 @@ Render an OpenClaw-compatible prompt for `/scaffold`:
 ./scripts/aiup-command.sh render --agent openclaw scaffold
 ```
 
+Render a Cursor-friendly prompt (mentions `@` context and the same execution contract):
+
+```bash
+./scripts/aiup-command.sh render --agent cursor scaffold
+```
+
 The renderer emits a plain prompt that tells the target agent to:
 
 - read `AGENTS.md`
 - execute the requested `commands/<name>.md`
 - handle any referenced `skills/` or `agents/` files manually
 
-See [PORTABILITY.md](./PORTABILITY.md) for the non-Claude workflow.
+See [PORTABILITY.md](./PORTABILITY.md) for the non-Claude workflow and [CURSOR.md](./CURSOR.md) for Cursor-specific rules, hooks, and workflows.
 
 ## Quick Start
 
@@ -100,7 +117,7 @@ See [PORTABILITY.md](./PORTABILITY.md) for the non-Claude workflow.
    ```
    /requirements        # Gather requirements + decide whether Share is really the UI target
    /scaffold            # Generate a Share-only project or a mixed repo+share/events layout
-   /share-config       # Generate Share forms and share-config-custom.xml
+   /share-config       # Share forms, DocLib actions, rule UI, evaluators, indicators
    /surf               # Generate Surf pages, components, and extension metadata
    /aikau              # Generate Aikau pages, widget models, and dashlet-style UI
    ```
@@ -131,7 +148,7 @@ See [PORTABILITY.md](./PORTABILITY.md) for the non-Claude workflow.
 | `/metadata-extractor` | In-Process | Any | Custom `AbstractMappingMetadataExtracter` + colocated mapping `.properties` + registry registration + unit test |
 | `/subsystem` | In-Process / Config | Any | Custom subsystem (`ChildApplicationContextFactory` + default/instance properties); authentication mode configures the `authentication.chain` (LDAP, identity-service/OIDC, external) |
 | `/aca-extension` | ACA/ADW (Angular) | Any | Full ACA/ADW UI extension: `plugin.json` manifest, `provideExtension()` providers function, NgRx actions + effects, Angular standalone components (page, sidebar), HTTP service, and integration patch instructions |
-| `/share-config` | Share JAR | Any | `share-config-custom.xml` + Share message bundle + optional evaluator stub |
+| `/share-config` | Share JAR | Any | `share-config-custom.xml`, DocLib actions, rule UI, evaluators, message bundle, slingshot context |
 | `/surf` | Share JAR | Any | Surf extension metadata + page/component web scripts + optional message bundle/evaluator |
 | `/aikau` | Share JAR | Any | Aikau page descriptors + page-model JS + optional widget module/message bundle |
 | `/events` | Out-of-Process | Any | Spring Boot event listener + ActiveMQ config |

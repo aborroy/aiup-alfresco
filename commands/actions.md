@@ -28,11 +28,14 @@ project's `Root path` from Section 2 (Project Architecture).
 ### 2. Spring Bean Registration
 Add to `{platform-project-root}/src/main/resources/alfresco/module/{module-id}/context/service-context.xml`:
 ```xml
-<bean id="{prefix}.{actionName}" class="{package}.action.{Name}ActionExecuter" parent="action-executer">
+<bean id="{prefix}.{actionBeanName}" class="{package}.action.{Name}ActionExecuter" parent="action-executer">
     <property name="nodeService" ref="NodeService"/>
     <!-- additional service references -->
 </bean>
 ```
+
+The bean `id` is the repository action identifier used by Share, rules, and the Action REST API.
+Follow *Spring Beans* and *Share UI Model → Repository action wiring* in `AGENTS.md`.
 
 ## Action Reference
 
@@ -69,8 +72,8 @@ Chain several actions into one unit with `CompositeAction`:
 
 ```java
 CompositeAction composite = actionService.createCompositeAction();
-composite.addAction(actionService.createAction("{prefix}-first"));
-composite.addAction(actionService.createAction("{prefix}-second"));
+composite.addAction(actionService.createAction("{prefix}.firstAction"));
+composite.addAction(actionService.createAction("{prefix}.secondAction"));
 actionService.executeAction(composite, nodeRef);
 ```
 
@@ -81,12 +84,25 @@ Actions, rule conditions (`/rule-conditions`), and parameter constraints share
 ## Conventions
 - `{module-id}` is the Platform JAR **artifactId** — the bare artifact ID (e.g. `actions`), not the full `module.id` property value (e.g. `com.someco.actions`). Derive it as `{platform-artifactId}` from Section 2 of `REQUIREMENTS.md` or from `<artifactId>` in the platform `pom.xml`. **Never use `{groupId}.{artifactId}` as the directory name.**
 - `{platform-project-root}` is `.` for Platform JAR only mode, or `{name}-platform/` for Mixed mode
-- Action name format: `{prefix}-{action-name}`
+- **Action bean id**: `{prefix}.{beanName}` (camelCase after the dot), e.g. `sc.setWebFlag`, `sc.enableWebFlag` — per *Spring Beans* in `AGENTS.md`
 - Use parent `action-executer` bean
 - Define compensation action if the operation is reversible
 - Never generate action executers inside the Event Handler project
+- Follow *Spring Beans* and *Share UI Model → Repository action wiring* in `AGENTS.md`
 
 ## Share UI / Rules Registration
 Registering the bean makes the action available programmatically and via the Action REST API.
-To surface it in the **Share Rules UI** (the action dropdown in a folder rule), a
-`share-config-custom.xml` entry in a Share JAR is also needed — use `/share-config` for that.
+
+When requirements mention Share document-library menus, action dialogs, or folder-rule UI,
+generate repository actions here first, then run `/share-config` for Share-tier wiring.
+Share never invents action bean ids — it reuses the ids declared in `service-context.xml`.
+
+| Share need | `/share-config` section | Share parameter referencing this bean id |
+|------------|-------------------------|------------------------------------------|
+| Document library / details menu items | `DocLibActions` (§1c) | `<param name="action">` or `<param name="itemId">` |
+| Single-click enable/disable (no dialog) | `DocLibActions` (§1c) | `<param name="action">` on `onActionSimpleRepoAction` |
+| Action dialog with parameters | `DocLibActions` (§1c) + action form (§1e) | `<param name="itemId">` + form `condition` |
+| Folder rule with noderef/path parameter | rule-config override (§5) | `<action name="...">` |
+| Parameterless rule actions | — | No Share config — appear automatically in the rule dropdown |
+
+Do **not** register UI actions in `service-context.xml` or inside form `<config>` blocks.

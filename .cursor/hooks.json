@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": ".cursor/hooks/before-shell-model-commit.sh",
+        "matcher": "git\\s+commit",
+        "timeout": 10
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": ".cursor/hooks/after-file-edit-traceability.sh",
+        "matcher": "Write|TabWrite",
+        "timeout": 10
+      }
+    ],
+    "afterShellExecution": [
+      {
+        "command": ".cursor/hooks/after-shell-maven-debugger.sh",
+        "matcher": "mvn|mvnw",
+        "timeout": 10
+      }
+    ]
+  }
+}

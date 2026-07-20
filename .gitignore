@@ -32,3 +32,6 @@ replay_pid*
 .vscode/
 .idea/
 *.iml
+
+.agents/
+skills-lock.json

@@ -58,6 +58,82 @@ jobs:
           done
           exit $exit_code
 
+  validate-cursor-pack:
+    name: Validate Cursor pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Regenerate and verify Cursor skills
+        run: |
+          chmod +x scripts/build-cursor-skills.sh scripts/install-cursor-pack.sh
+          ./scripts/build-cursor-skills.sh
+          if [ -n "$(git status --porcelain .cursor/skills/)" ]; then
+            echo "ERROR: Committed .cursor/skills/ drifts from build-cursor-skills.sh output."
+            echo "Run ./scripts/build-cursor-skills.sh and commit the result."
+            git diff -- .cursor/skills/
+            git status --porcelain .cursor/skills/
+            exit 1
+          fi
+          count=$(find .cursor/skills -name 'SKILL.md' | wc -l)
+          echo "Found $count Cursor skills"
+          cmd_count=$(find commands -maxdepth 1 -name '*.md' | wc -l)
+          validator_count=$(find skills -name 'SKILL.md' | wc -l)
+          agent_count=$(find agents -name '*.md' | wc -l)
+          expected=$((cmd_count + validator_count + agent_count + 1))
+          echo "Expected $expected skills ($cmd_count commands + $validator_count validators + $agent_count agents + 1 orchestrator)"
+          [ "$count" -eq "$expected" ] || { echo "Skill count mismatch: got $count, expected $expected"; exit 1; }
+          orch_count=$(grep -c '^| `/' .cursor/skills/aiup-alfresco/SKILL.md)
+          echo "Commands: $cmd_count, orchestrator entries: $orch_count"
+          [ "$cmd_count" -eq "$orch_count" ] || { echo "Orchestrator out of sync with commands/"; exit 1; }
+          for f in .cursor/skills/*/SKILL.md; do
+            grep -q '^name:' "$f" || { echo "Missing name in $f"; exit 1; }
+            grep -q '^description:' "$f" || { echo "Missing description in $f"; exit 1; }
+          done
+          for cmd in commands/*.md; do
+            name=$(basename "$cmd" .md)
+            skill=".cursor/skills/$name/SKILL.md"
+            [ -f "$skill" ] || { echo "Missing command skill: $skill"; exit 1; }
+            grep -q '^disable-model-invocation: true' "$skill" || { echo "Missing disable-model-invocation in $skill"; exit 1; }
+          done
+      - name: Verify consumer-prefix skill generation
+        run: |
+          tmp=$(mktemp -d)
+          ./scripts/build-cursor-skills.sh --aiup-prefix tools/aiup-alfresco/ --output "$tmp/skills"
+          grep -q 'tools/aiup-alfresco/AGENTS.md' "$tmp/skills/scaffold/SKILL.md"
+          grep -q 'tools/aiup-alfresco/commands/scaffold.md' "$tmp/skills/scaffold/SKILL.md"
+          rm -rf "$tmp"
+      - name: Verify consumer install copies traceability dependency
+        run: |
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          mkdir -p "$tmp/tools"
+          ln -s "$GITHUB_WORKSPACE" "$tmp/tools/aiup-alfresco"
+          cd "$tmp"
+          "$GITHUB_WORKSPACE/scripts/install-cursor-pack.sh"
+          test -f scripts/traceability-artefacts.sh
+          test -x scripts/traceability-artefacts.sh
+          # shellcheck source=/dev/null
+          source scripts/traceability-artefacts.sh
+          classify_traceability_artefact "src/main/java/com/example/job/MyJob.java"
+          [ "$ARTEFACT_TYPE" = "scheduled-job" ]
+      - name: Verify traceability artefact classifier
+        run: |
+          chmod +x scripts/traceability-artefacts.sh
+          source scripts/traceability-artefacts.sh
+          classify_traceability_artefact "src/main/java/com/example/job/MyJob.java"
+          [ "$ARTEFACT_TYPE" = "scheduled-job" ]
+          classify_traceability_artefact "extensions/my-ext.plugin.json"
+          [ "$ARTEFACT_TYPE" = "aca-extension" ]
+          classify_traceability_artefact "processes/approval.bpmn"
+          [ "$ARTEFACT_TYPE" = "workflow" ]
+      - name: Check Cursor hooks
+        run: |
+          test -f .cursor/hooks.json
+          test -f .cursor/rules/aiup-alfresco.mdc
+          for f in .cursor/hooks/*.sh; do
+            test -x "$f" || { echo "Hook not executable: $f"; exit 1; }
+          done
+
   validate-plugin:
     name: Validate plugin structure
     runs-on: ubuntu-latest

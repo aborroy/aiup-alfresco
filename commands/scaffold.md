@@ -70,12 +70,13 @@ Single Share-tier project at the repo root.
 ├── src/main/java/{java-package}/
 │   └── share/                         # optional Java evaluators / helpers
 ├── src/main/resources/
-│   ├── alfresco/
-│   │   ├── web-extension/
-│   │   │   ├── share-config-custom.xml         # added later by /share-config
-│   │   │   ├── messages/
-│   │   │   └── site-data/extensions/           # Surf extension metadata
-│   │   └── site-webscripts/                    # Surf/Aikau web-tier scripts
+│   ├── META-INF/
+│   │   └── share-config-custom.xml             # added later by /share-config
+│   └── alfresco/
+│       ├── web-extension/
+│       │   ├── messages/
+│       │   └── site-data/extensions/           # Surf extension metadata
+│       └── site-webscripts/                    # Surf/Aikau web-tier scripts
 └── src/test/java/{java-package}/
 ```
 
@@ -107,6 +108,7 @@ Aggregator POM at the repo root, child modules as sibling directories.
 ├── {artifactId}-share/            ← Share JAR child module (include only if needed)
 │   ├── pom.xml
 │   └── src/main/resources/
+│       ├── META-INF/              # share-config-custom.xml added by /share-config
 │       └── alfresco/
 │           ├── web-extension/
 │           └── site-webscripts/

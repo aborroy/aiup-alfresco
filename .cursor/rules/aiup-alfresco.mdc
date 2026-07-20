@@ -1,0 +1,45 @@
+---
+description: AIUP Alfresco extension conventions — read AGENTS.md and command specs before generating or reviewing code
+alwaysApply: true
+---
+
+# AIUP — Alfresco extension development (Cursor)
+
+You are working in a repository that follows **AIUP** (AI Unified Process) for Alfresco Content Services extensions.
+
+## Mandatory first step
+
+Before generating, editing, or reviewing Alfresco-related code (Java under Alfresco modules, `alfresco/module/**`, content models, web scripts, BPMN workflows, Quartz scheduled jobs, repository patches, transforms, Share/ACA UI extensions, Spring Boot event listeners, `compose.yaml`, etc.), **read and follow** the project rules in **`AGENTS.md`** at the repository root. Treat `AGENTS.md` as the single source of truth for stack versions, layout, naming, forbidden patterns, and testing conventions.
+
+In consumer projects with a submodule at `tools/aiup-alfresco/`, read **`tools/aiup-alfresco/AGENTS.md`** instead (subject to any local version override rule).
+
+## How AIUP commands map here
+
+Cursor 2.4+ exposes AIUP steps as **slash commands** via Agent Skills in `.cursor/skills/`:
+
+- Type **`/requirements`**, **`/scaffold`**, **`/content-model`**, etc. in Agent chat
+- Each command skill has `disable-model-invocation: true` — it runs only when explicitly invoked
+- Command skills point at `commands/<name>.md` (or `tools/aiup-alfresco/commands/<name>.md` in consumer repos)
+
+Fallbacks when slash commands are not used:
+
+- **`commands/<name>.md`** — full procedure; open via `@commands/<name>.md`
+- **`.cursor/skills/<skill-name>/SKILL.md`** — validators (auto-triggered) and agent guidance
+- **`aiup-alfresco`** orchestrator skill — lists all commands when the step name is unclear
+- **`./scripts/aiup-command.sh render --agent cursor <command>`** — portable rendered prompt
+
+When the user asks to run an AIUP step without naming a file, match the request to the closest `/command` or use the **`aiup-alfresco`** orchestrator.
+
+## Output expectations
+
+When an AIUP command requires file output, **create or update real files** in the repo; do not stop at a high-level summary unless the user only asked for a plan.
+
+## Consumer project install
+
+From an Alfresco project root with submodule at `tools/aiup-alfresco/`:
+
+`./tools/aiup-alfresco/scripts/install-cursor-pack.sh`
+
+Re-run after `git submodule update` to refresh slash-command skills.
+
+See **`CURSOR.md`** and **`CURSOR-INTEGRATION-GUIDE.md`** for installation, hooks, and troubleshooting.

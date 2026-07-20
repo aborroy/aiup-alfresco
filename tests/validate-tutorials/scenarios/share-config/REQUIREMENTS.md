@@ -37,7 +37,7 @@ None.
 None.
 
 ## 8. Deployment Requirements
-- Share JAR with `share-config-custom.xml` under `alfresco/web-extension/`.
+- Share JAR with `share-config-custom.xml` under `META-INF/`.
 - A Share message bundle providing the `label-id` keys.
 - No Share files written under `alfresco/module/...`.
 

@@ -11,6 +11,18 @@ The portable source of truth is:
 
 Claude adds a slash-command UI on top of those files. Other agents can use the same command content by rendering it into a normal prompt.
 
+## Cursor
+
+| Topic | Details |
+|-------|---------|
+| Rules | [`.cursor/rules/aiup-alfresco.mdc`](./.cursor/rules/aiup-alfresco.mdc) applies AIUP context (`alwaysApply: true`); full conventions remain in [`AGENTS.md`](./AGENTS.md). |
+| Skills | [`.cursor/skills/`](./.cursor/skills/) — command slash skills (one per `commands/*.md`), validators, agents, and `aiup-alfresco` orchestrator. Regenerate with `./scripts/build-cursor-skills.sh`; consumer repos use `install-cursor-pack.sh`. |
+| Renderer | `./scripts/aiup-command.sh render --agent cursor <command> [args…]` — same output shape as `generic`, with a preamble tuned for Cursor (`@` file references). |
+| Hooks | [`.cursor/hooks.json`](./.cursor/hooks.json) registers Cursor-native hooks (see [`CURSOR.md`](./CURSOR.md)); they are separate from Claude’s [`hooks/hooks.json`](./hooks/hooks.json). |
+| Slash commands | Cursor 2.4+ — type `/requirements`, `/scaffold`, etc. in Agent chat (skills with `disable-model-invocation: true`). In consumer repos, run `./tools/aiup-alfresco/scripts/install-cursor-pack.sh` first. |
+
+End-to-end guide: **[CURSOR.md](./CURSOR.md)**.
+
 ## Quick Start
 
 List the available commands:
@@ -30,6 +42,13 @@ Render a prompt for OpenClaw:
 
 ```bash
 ./scripts/aiup-command.sh render --agent openclaw scaffold
+```
+
+Render a prompt for Cursor Agent:
+
+```bash
+./scripts/aiup-command.sh render --agent cursor requirements \
+  "We need to manage contracts with approval dates"
 ```
 
 Use the output as the prompt you send to the target agent.
@@ -53,9 +72,10 @@ Use the output as the prompt you send to the target agent.
 
 These remain Claude-specific and are not interpreted automatically by other agents:
 
-- slash-command invocation such as `/scaffold`
 - plugin installation via `claude plugin install`
-- hook automation in `hooks/hooks.json`
-- automatic skill dispatch
+- hook automation in `hooks/hooks.json` (Claude Code hook schema and paths)
+- automatic skill dispatch in Claude Code
 
 Outside Claude, the renderer replaces those features with an explicit prompt you can feed to another agent.
+
+**Cursor** additionally uses `.cursor/rules/*.mdc`, `.cursor/skills/` slash commands, and `.cursor/hooks.json`; see [CURSOR.md](./CURSOR.md).

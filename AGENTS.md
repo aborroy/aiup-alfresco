@@ -157,9 +157,12 @@ Standard project layouts for repository, Share-tier, and event-driven extensions
 ├── {name}-platform/                                 # Present in mixed layouts when repo code is needed
 │   └── src/main/resources/alfresco/module/{module-id}/
 ├── {name}-share/                                    # Present in mixed layouts when Share-tier UI is needed
-│   └── src/main/resources/alfresco/
-│       ├── web-extension/
-│       └── site-webscripts/
+│   └── src/main/resources/
+│       ├── META-INF/
+│       │   └── share-config-custom.xml              # added by /share-config
+│       └── alfresco/
+│           ├── web-extension/
+│           └── site-webscripts/
 └── {name}-events/                                   # Present in mixed layouts when async handling is needed
     └── src/main/resources/application.properties
 ```
@@ -1363,11 +1366,43 @@ Always discover `processDefinitionId` dynamically from `GET /process-definitions
 | Artifact | Path |
 |----------|------|
 | Share config root | `src/main/resources/alfresco/web-extension/` |
-| Main Share form config | `src/main/resources/alfresco/web-extension/share-config-custom.xml` |
+| Main Share form config | `src/main/resources/META-INF/share-config-custom.xml` |
 | Surf extension metadata | `src/main/resources/alfresco/web-extension/site-data/extensions/{extensionName}.xml` |
 | Share message bundles | `src/main/resources/alfresco/web-extension/messages/{bundle}.properties` |
 | Surf / Aikau web-tier web scripts | `src/main/resources/alfresco/site-webscripts/{path}/...` |
 | Java evaluators / helpers | `src/main/java/{package}/share/...` |
+
+### Repository action wiring
+
+Repository action executers are registered in the Platform JAR (`/actions`) with Spring bean ids
+following the global *Spring Beans* rule: `{prefix}.{beanName}` (camelCase after the dot), e.g.
+`sc.setWebFlag`, `sc.enableWebFlag`. Share wiring (`/share-config`) must reference those exact
+bean ids — never invent parallel Share-only action ids.
+
+| Share scenario | Share parameter / config | Value |
+|----------------|------------------------|-------|
+| `onActionSimpleRepoAction` (parameterless) | `<param name="action">` | Repository action Spring bean id (`{prefix}.{beanName}`) |
+| `onActionFormDialog` | `<param name="itemId">` | Same bean id |
+| `onActionFormDialogWithSubmitDisable` | `<param name="itemId">` | Same bean id |
+| Form dialog handlers (both above) | also require | `itemKind=action`, `mode=create`, `destination={node.nodeRef}` |
+| Action parameter form | `<config evaluator="string-compare" condition="...">` | `condition` = same bean id |
+| Folder rule action picker | `<action name="...">` in rule-config | Same bean id |
+| DocLib menu action display text | `<action label="...">` attribute | Message bundle key or literal text — **not** `label-id` |
+
+**DocLib action labels:** `<action>` elements inside `DocLibActions` use the `label` attribute for
+display text (message key or literal). Do **not** use `label-id` on `<action>` — that attribute
+belongs to form fields (`<field>`, `<set>`) only.
+
+**Id separation:**
+
+- **Repository action bean id** — `{prefix}.{beanName}` (e.g. `sc.enableWebFlag`); used in
+  `service-context.xml`, Share `<param name="action">`, `<param name="itemId">`, form
+  `condition`, and rule-config `<action name="...">`.
+- **DocLib UI action `id`** — project-prefixed kebab-case (e.g. `sc-web-enable`); used only
+  for Share menu `<action id="...">` and `<actionGroups>` — distinct from the repository bean id.
+
+Generate repository actions with `/actions` first; wire Share menus, dialogs, and rule UI with
+`/share-config` second.
 
 ### Naming Conventions
 
@@ -1400,6 +1435,7 @@ Always discover `processDefinitionId` dynamically from `GET /process-definitions
 | Replacing built-in Share pages when extension modules would suffice | Increases fragility and upgrade risk | Prefer additive extension modules and component insertion |
 | Generating unnecessary custom Aikau widgets when built-in widgets suffice | Increases maintenance cost and JS surface area | Prefer widget composition and existing Aikau services first |
 | Embedding repository business rules in Aikau page-model JavaScript | Moves server-side logic into brittle client-side code | Keep business rules in repository APIs or repo-side commands |
+| Using `label-id` on DocLib `<action>` elements | Share DocLib actions resolve display text via the `label` attribute, not `label-id` | Use `label="message.key"` or `label="Literal text"` on `<action>`; reserve `label-id` for form `<field>` / `<set>` only |
 
 ---
 

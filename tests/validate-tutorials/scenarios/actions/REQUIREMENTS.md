@@ -41,10 +41,10 @@ None.
 
 ## 7. Behaviour Requirements
 ### Actions
-- `EnableWebFlag` (`enable-web-flag`): sets `sc:isActive=true` on the actioned node.
-- `DisableWebFlag` (`disable-web-flag`): sets `sc:isActive=false` on the actioned node.
-- `SetWebFlag` (`set-web-flag`): parameter `active` (d:boolean), sets `sc:isActive` accordingly.
-- `MoveReplacedActionExecuter` (`move-replaced`): parameter `destination-folder` (d:noderef),
+- `EnableWebFlag` (`sc.enableWebFlag`): sets `sc:isActive=true` on the actioned node.
+- `DisableWebFlag` (`sc.disableWebFlag`): sets `sc:isActive=false` on the actioned node.
+- `SetWebFlag` (`sc.setWebFlag`): parameter `active` (d:boolean), sets `sc:isActive` accordingly.
+- `MoveReplacedActionExecuter` (`sc.moveReplaced`): parameter `destination-folder` (d:noderef),
   moves the actioned node to the specified folder.
 
 ## 8. Deployment Requirements

@@ -44,7 +44,11 @@ assert_file_exists "${ACTION_JAVA:-/nonexistent}" "*ActionExecuter.java exists"
 # ---- service-context.xml with action-executer parent bean ----
 SERVICE_CTX=$(find "$GEN" -name "service-context.xml" -not -path "*/target/*" | head -1)
 assert_file_exists "${SERVICE_CTX:-/nonexistent}" "service-context.xml exists"
-[[ -n "$SERVICE_CTX" ]] && assert_grep 'action-executer' "$SERVICE_CTX" "service-context.xml registers action-executer bean"
+if [[ -n "$SERVICE_CTX" ]]; then
+    assert_grep 'action-executer' "$SERVICE_CTX" "service-context.xml registers action-executer bean"
+    assert_grep 'id="[a-z][a-z0-9]*\.[a-zA-Z][a-zA-Z0-9]*"' "$SERVICE_CTX" \
+        "action bean id follows {prefix}.{beanName} pattern"
+fi
 
 print_summary "actions"
 exit_with_status

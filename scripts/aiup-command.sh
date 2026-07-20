@@ -11,12 +11,13 @@ usage() {
     cat <<EOF
 Usage:
   $(basename "$0") list
-  $(basename "$0") render [--agent codex|openclaw|generic] <command> [arguments...]
+  $(basename "$0") render [--agent codex|openclaw|generic|cursor] <command> [arguments...]
 
 Examples:
   $(basename "$0") list
   $(basename "$0") render --agent codex scaffold
   $(basename "$0") render --agent openclaw requirements "We need to classify contracts"
+  $(basename "$0") render --agent cursor scaffold
 EOF
 }
 
@@ -56,10 +57,10 @@ normalize_command_name() {
 
 validate_agent() {
     case "$1" in
-        codex|openclaw|generic)
+        codex|openclaw|generic|cursor)
             ;;
         *)
-            fail "unsupported agent '$1' (expected: codex, openclaw, generic)"
+            fail "unsupported agent '$1' (expected: codex, openclaw, generic, cursor)"
             ;;
     esac
 }
@@ -98,6 +99,15 @@ EOF
             cat <<EOF
 You are an AI coding agent working directly in this repository.
 Follow the repository rules in AGENTS.md before doing anything else.
+Implement the command by editing files when the command requires generated output; do not stop at a summary.
+If REQUIREMENTS.md declares both Platform JAR and Event Handler projects, keep them as separate sibling modules/deployables and write files under the Section 2 Root path for each project.
+EOF
+            ;;
+        cursor)
+            cat <<EOF
+You are the Cursor AI agent working in this repository workspace.
+Follow the repository rules in AGENTS.md before doing anything else.
+Attach or read context using Cursor @ references (for example @AGENTS.md and @commands/<command>.md) when helpful.
 Implement the command by editing files when the command requires generated output; do not stop at a summary.
 If REQUIREMENTS.md declares both Platform JAR and Event Handler projects, keep them as separate sibling modules/deployables and write files under the Section 2 Root path for each project.
 EOF
