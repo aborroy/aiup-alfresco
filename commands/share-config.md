@@ -38,6 +38,7 @@ If the requirement is clearly for ACA/ADF/custom frontend work instead of Share,
 | Category | Typical requirement signal | Primary artefacts |
 |----------|---------------------------|-------------------|
 | Forms | edit/create/view metadata in Share | `node-type` / `aspect` `<config>` blocks |
+| Advanced Search | custom type in Share Advanced Search ("Look for") | `AdvancedSearch` menu + `model-type` `<form id="search">` (§1f) |
 | Aspects in DocLib | add/remove aspects from document library | `DocumentLibrary` `<aspects>` block |
 | DocLib UI actions | menu items invoking repo actions or URLs | `DocLibActions` `<config>` block |
 | Rule action UI | folder picker or custom parameter UI for folder rules | rule-config web script override + JS component |
@@ -58,13 +59,13 @@ When creating a new file, start from this skeleton:
 
 ```xml
 <alfresco-config>
-    <!-- <config> blocks from §1a–1e -->
+    <!-- <config> blocks from §1a–1f -->
 </alfresco-config>
 ```
 
 When updating an existing file, preserve the `<alfresco-config>` wrapper and insert or merge `<config>` blocks inside it.
 
-Subsections §1a–1e show **partial** `<config>` blocks only — never emit a standalone file containing only those snippets.
+Subsections §1a–1f show **partial** `<config>` blocks only — never emit a standalone file containing only those snippets.
 
 #### 1a. Type and aspect forms
 
@@ -267,13 +268,115 @@ repository action Spring bean id (same value as `<param name="itemId">` in §1c)
 - Do **not** use a standalone `<form id="...">` referenced by a custom itemId — Share resolves the form via `condition="{prefix}.{actionBeanName}"`
 - Label keys: `{prefix}.{actionBeanName}.form.field.{paramName}` in the Share message bundle (§2)
 
+#### 1f. Advanced Search forms
+
+Generate this only when requirements ask for Share Advanced Search (a custom type in the "Look for" menu, or a search form). Do **not** reuse the edit/create `node-type` form from §1a: Advanced Search resolves `evaluator="model-type"` and form id `search`, and search controls differ from edit controls.
+
+Two partial blocks — append both inside the single `<alfresco-config>` root from §1.
+
+**Menu entry** (adds the type to the existing "Look for" list; do not set `replace="true"`). `{type}` in `labelId` and `descriptionId` is the local name, without the prefix:
+
+```xml
+<config evaluator="string-compare" condition="AdvancedSearch">
+    <advanced-search>
+        <forms>
+            <form labelId="{prefix}.search.form.label.{type}"
+                  descriptionId="{prefix}.search.form.desc.{type}">{prefix}:{type}</form>
+        </forms>
+    </advanced-search>
+</config>
+```
+
+**Search form:**
+
+```xml
+<config evaluator="model-type" condition="{prefix}:{type}">
+    <forms>
+        <form id="search">
+            <field-visibility>
+                <show id="cm:name"/>
+                <show id="cm:title" force="true"/>
+                <show id="cm:description" force="true"/>
+                <show id="{prefix}:{dateProp}"/>
+                <show id="{prefix}:{numberProp}"/>
+                <show id="{prefix}:{listProp}"/>
+            </field-visibility>
+            <appearance>
+                <field id="{prefix}:{dateProp}">
+                    <control template="/org/alfresco/components/form/controls/daterange.ftl"/>
+                </field>
+                <field id="{prefix}:{numberProp}">
+                    <control template="/org/alfresco/components/form/controls/numberrange.ftl"/>
+                </field>
+                <field id="{prefix}:{listProp}">
+                    <control template="/org/alfresco/components/form/controls/selectmany.ftl"/>
+                </field>
+            </appearance>
+        </form>
+    </forms>
+</config>
+```
+
+Include only properties that exist on the type, plus aspect properties the requirement asks to search. Properties that belong to an aspect and not to the type itself (for example `cm:title` and `cm:description` on a type that extends `cm:content`) must use `<show force="true"/>`. `d:text`, `d:mltext`, and `d:boolean` keep the Forms engine default control — do not set a template for them.
+
+**Search form controls** — set the template or control-param only on the search form, never on the edit/create form in §1a:
+
+| Property kind | Visibility | Control |
+|---------------|------------|---------|
+| LIST constraint (list of values) | `<show>` | `template="/org/alfresco/components/form/controls/selectmany.ftl"` |
+| `d:int`, `d:long`, `d:float`, `d:double` | `<show>` | `template="/org/alfresco/components/form/controls/numberrange.ftl"` |
+| `d:date`, `d:datetime` (including `cm:created`, `cm:modified`) | `<show>` | `template="/org/alfresco/components/form/controls/daterange.ftl"` |
+| Read-only in edit and not already a range (`cm:creator`, `cm:modifier`) | `<show>` | `<control-param name="forceEditable">true</control-param>` |
+| Pseudo-property `mimetype` | `<show>` | `template="/org/alfresco/components/form/controls/mimetype.ftl"` |
+| `cm:categories` | `<show force="true"/>` | `compactMode=true` and `showSubCategoriesOption=true` |
+| `cm:taggable` | `<show force="true"/>` | `compactMode=true`, `params=aspect=cm:taggable`, `createNewItemUri=/api/tag/workspace/SpacesStore`, `createNewItemIcon=tag` |
+
+`cm:categories` and `cm:taggable`:
+
+```xml
+<field id="cm:categories">
+    <control>
+        <control-param name="compactMode">true</control-param>
+        <control-param name="showSubCategoriesOption">true</control-param>
+    </control>
+</field>
+<field id="cm:taggable">
+    <control>
+        <control-param name="compactMode">true</control-param>
+        <control-param name="params">aspect=cm:taggable</control-param>
+        <control-param name="createNewItemUri">/api/tag/workspace/SpacesStore</control-param>
+        <control-param name="createNewItemIcon">tag</control-param>
+    </control>
+</field>
+```
+
+Read-only text such as `cm:modifier` (dates use `daterange.ftl` instead):
+
+```xml
+<field id="cm:modifier">
+    <control>
+        <control-param name="forceEditable">true</control-param>
+    </control>
+</field>
+```
+
+**Advanced Search rules:**
+
+| Rule | Detail |
+|------|--------|
+| Evaluator | Search form uses `model-type`, not `node-type` or `aspect` |
+| Form id | Default id is `search`. Omit `id` on the menu `<form>` unless a non-default id is required; then set the same `id` on the menu `<form>` and on `<form id="...">` |
+| `replace="true"` | Do not set it. It removes the OOTB `cm:content` and `cm:folder` entries. If requirements replace the whole menu, re-declare those OOTB forms in the same `<forms>` list |
+| Merge | One `condition="AdvancedSearch"` block per file — merge extra `<form>` entries into it |
+| Edit forms | Leave §1a controls unchanged; range, `selectmany`, and `forceEditable` belong only on the search form |
+
 ---
 
 ### 2. Share message bundle
 
 `{share-project-root}/src/main/resources/alfresco/web-extension/messages/{module-id}-share.properties`
 
-Include keys for forms, aspects, associations, actions, and messages:
+Include keys for forms, aspects, associations, Advanced Search menu labels, actions, and messages:
 
 ```properties
 # forms
@@ -281,6 +384,10 @@ Include keys for forms, aspects, associations, actions, and messages:
 {prefix}.{propOne}=Property One
 aspect.{prefix}_{aspect}=Aspect Title
 assoc.{prefix}_{assocName}=Association Label
+
+# Advanced Search menu (§1f) — {type} is the local name, without the prefix
+{prefix}.search.form.label.{type}=Search Type
+{prefix}.search.form.desc.{type}=Search Type description
 
 # DocLib actions
 actions.{prefix}.web-enable=Enable Web
@@ -477,6 +584,7 @@ Register the class as a Spring bean in `{artifactId}-slingshot-application-conte
 | Concern | Config evaluator | Wrong pattern |
 |---------|------------------|---------------|
 | Edit/create forms | `node-type` / `aspect` | Putting actions inside form blocks |
+| Advanced Search | `string-compare` `AdvancedSearch` plus `model-type` `<form id="search">` | Nesting the search form in the `node-type` block, or `replace="true"` without re-declaring `cm:content` and `cm:folder` |
 | DocLib menu actions | `DocLibActions` | Registering UI actions in `service-context.xml` |
 | DocLib action with `label-id` instead of `label` | `DocLibActions` `<action label="...">` | `label-id` on `<action>` — valid only on form `<field>` / `<set>` |
 | Action parameter forms | `string-compare` with `condition="{prefix}.{beanName}"` | `<form id="...">` with a custom itemId unrelated to the bean id |
@@ -488,6 +596,7 @@ Register the class as a Spring bean in `{artifactId}-slingshot-application-conte
 
 - Always generate a full `<form>` block for the type/aspect when forms are required
 - Generate `doclib-simple-metadata` when metadata should appear in document-library inline editing
+- When requirements ask for Advanced Search, generate both blocks in §1f: the `AdvancedSearch` menu entry and a `model-type` `<form id="search">` whose controls follow the search-form table (ranges, `selectmany`, `forceEditable`) — do not copy §1a edit controls onto the search form
 - For `onActionFormDialog` / `onActionFormDialogWithSubmitDisable` actions, define the parameter form in §1e with `condition` equal to the repository action bean id; field ids match action parameter names from `/actions`
 
 ### Rule 4 — Prefer OOTB Share evaluators and JS handlers
@@ -506,6 +615,7 @@ Register the class as a Spring bean in `{artifactId}-slingshot-application-conte
 - Append or update relevant `<config>` blocks **inside** `<alfresco-config>` in `share-config-custom.xml`
 - Do not duplicate `<config evaluator="string-compare" condition="DocumentLibrary">` blocks — merge children
 - Do not duplicate `<config evaluator="string-compare" condition="DocLibActions">` blocks
+- Do not duplicate `<config evaluator="string-compare" condition="AdvancedSearch">` blocks — merge extra `<form>` entries into the existing `<advanced-search><forms>` list
 
 ### Rule 7 — Keep deployment boundaries
 
@@ -557,7 +667,8 @@ After generating files, verify:
 - `share-config-custom.xml` is well-formed XML and lives at `src/main/resources/META-INF/share-config-custom.xml`
 - `share-config-custom.xml` uses `<alfresco-config>` as the document root (required by CI)
 - referenced QNames match the repository content model when a Platform JAR exists
-- every form `label-id`, DocLib action `label`, and message key exists in the Share message bundle
+- every form `label-id`, Advanced Search `labelId` / `descriptionId`, DocLib action `label`, and message key exists in the Share message bundle
+- when Advanced Search is required: an `AdvancedSearch` block lists the type (no `replace="true"` unless OOTB `cm:content` and `cm:folder` forms are re-declared) and a `model-type` `<form id="search">` uses the §1f control for each property kind (`daterange.ftl`, `numberrange.ftl`, `selectmany.ftl`, `forceEditable`, categories, tags)
 - DocLib `<action>` elements use `label="..."` — no `<action label-id="...">`
 - DocLib `<param name="action">` and `<param name="itemId">` values match existing action bean ids in Platform JAR `service-context.xml` (`{prefix}.{beanName}`)
 - action parameter form `condition` attributes match the same bean ids as `<param name="itemId">`
